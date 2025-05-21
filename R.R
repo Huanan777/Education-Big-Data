@@ -1,3 +1,4 @@
+install.packages("lavaan")
 # 計算敘述統計的函式
 calc_stats <- function(data) {
   stats <- data.frame(
