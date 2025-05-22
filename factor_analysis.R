@@ -1,4 +1,4 @@
-library("lavaan")
+library(lavaan)
 
 data1 <- read.csv("data_1.csv", stringsAsFactors = FALSE)
 
