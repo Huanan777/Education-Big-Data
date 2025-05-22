@@ -1,7 +1,5 @@
-# 安裝必要套件
-install.packages("psych")
-install.packages("GPArotation")
 
+setwd("C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\原始資料")
 library(psych)
 
 # 載入資料
