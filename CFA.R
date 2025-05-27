@@ -22,7 +22,12 @@ model <- '
 '
 
 # 執行確認性因素分析（CFA）
-fit <- cfa(model, data = data_items, estimator = "ML")
+fit <- cfa(model, data = data_items,
+           estimator = "WLSMV",
+           ordered = colnames(data_items))
+
 
 # 顯示適配度指標（包含 CFI）
 fitMeasures(fit, c("cfi", "tli", "rmsea", "srmr"))
+
+
