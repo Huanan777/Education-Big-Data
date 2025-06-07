@@ -2,14 +2,25 @@ library(lavaan)
 library(purrr)
 
 # === 1. 題目分群設定 ===
+# factor_groups <- list(
+#   F1 = c("v1", "v2", "v3", "v4", "v5", "v9", "v10", "v11", "v13", "v55"),
+#   F2 = c("v14", "v15", "v16", "v18", "v19", "v20"),
+#   F3 = c("v21", "v22", "v23", "v24", "v25"),
+#   F4 = c("v26", "v27", "v28", "v29", "v30", "v31"),
+#   F5 = c("v32", "v35", "v36", "v38", "v39", "v40", "v41", "v43", "v44"),
+#   F6 = c("v46", "v47", "v49", "v50", "v52", "v56", "v57", "v59", "v60")
+# )
+
 factor_groups <- list(
-  F1 = c("v1", "v2", "v3", "v4", "v5", "v9", "v10", "v11", "v13", "v55"),
-  F2 = c("v14", "v15", "v16", "v18", "v19", "v20"),
+  F1 = c("v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8","v9", "v10", "v11", "v12", "v13", "v53", "v55"),
+  F2 = c("v14", "v15", "v16", "v17","v18", "v19", "v20"),
   F3 = c("v21", "v22", "v23", "v24", "v25"),
   F4 = c("v26", "v27", "v28", "v29", "v30", "v31"),
-  F5 = c("v32", "v35", "v36", "v38", "v39", "v40", "v41", "v43", "v44"),
-  F6 = c("v46", "v47", "v49", "v50", "v52", "v56", "v57", "v59", "v60")
-)
+  F5 = c("v32", "v33", "v34","v35", "v36", "v37", "v38", "v39", "v40", "v41", "v42","v43", "v44"),
+  F6 = c("v45", "v46", "v47", "v48","v49", "v50", "v51", "v52", "v54", "v56", "v57", "v58", "v59", "v60")
+   )
+
+
 
 # === 2. 讀資料並處理缺值 ===
 data1 <- read.csv("data_1.csv", stringsAsFactors = FALSE)
@@ -35,7 +46,7 @@ for (factor_name in names(factor_groups)) {
       for (est in c("MLR", "WLSMV")) {
         fit <- tryCatch({
           if (est == "WLSMV") {
-            cfa(model, data = data_items, estimator = est, ordered = item_set)
+            cfa(model, data = data_items, estimator = est, ordered= item_set)
           } else {
             cfa(model, data = data_items, estimator = est)
           }
@@ -71,3 +82,10 @@ results_clean <- subset(results,
 results_clean$Item_Count <- sapply(strsplit(results_clean$Items, ","), length)
 View(results_clean)  # 可用來看表格
 write.csv(results_clean, "C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\results1_CFI90.csv", row.names = FALSE)
+
+d1 <- read.csv('results1_CFI90.csv')
+d2 <- read.csv('results2_CFI90.csv')
+# 假設 df1 和 df2 是你要合併的資料框
+merged_data <- merge(d1, d2, by = c("Factor", "Items"), all = TRUE)
+write.csv(merged_data, "C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\CFI90.csv", row.names = FALSE)
+
