@@ -1,21 +1,36 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
 
-# 讀資料
-data2 = pd.read_csv("data_2.CSV", encoding="big5")
+# === 1. 讀取資料 ===
+df = pd.read_csv("data_1.CSV", encoding="big5")
 
-# 將 age 轉為數字
-data2['age'] = pd.to_numeric(data2['age'], errors='coerce')
+# === 2. 年級轉中文標籤對應表 ===
+grade_label_map = {
+    1: "一年級",
+    2: "二年級",
+    3: "三年級",
+    4: "四年級",
+    5: "延畢",
+    6: "研究生",
+    11: "二年制專班一年級",
+    12: "二年制專班二年級",
+    13: "二年制專班延畢"
+}
 
-# 設定中文字體（Windows 通常可用「Microsoft JhengHei」）
-plt.rcParams['font.family'] = 'Microsoft JhengHei'
+# === 3. 數值轉中文 + 計數 ===
+df['grade'] = pd.to_numeric(df['grade'], errors='coerce')
+df['grade_label'] = df['grade'].map(grade_label_map)
+grade_counts = df['grade_label'].value_counts().reindex(grade_label_map.values()).dropna()
 
-# 畫圖
-plt.figure(figsize=(6, 8))
-plt.boxplot(data2['age'].dropna())
-plt.xticks([1], ["年齡"])  # 指定 X 軸標籤
-plt.title("年齡盒鬚圖")
-plt.ylabel("年齡")
-plt.grid(True)
+# === 4. 畫圖（放大畫布＋標籤旋轉）===
+plt.figure(figsize=(12, 6))  # ✅ 放大畫布
+grade_counts.plot(kind='bar', color='lightblue')
+
+plt.title("年級長條圖( data_1 )", fontsize=16)
+plt.xlabel("年級", fontsize=14)
+plt.ylabel("人數", fontsize=14)
+plt.xticks(rotation=45, ha='right', fontsize=12)  # ✅ 標籤旋轉 + 靠右 + 放大
+plt.yticks(fontsize=12)
+plt.grid(axis='y')
+plt.tight_layout()
 plt.show()

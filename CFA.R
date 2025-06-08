@@ -5,8 +5,8 @@ library(lavaan)
 library(gtools)
 
 # === 1. 載入資料與預處理 ===
-data1 <- read.csv("data_2.csv", stringsAsFactors = FALSE, fileEncoding = "big5")
-data_items <- data1[, grep("^v[0-9]+$", names(data1))]
+data2 <- read.csv("data_2.csv", stringsAsFactors = FALSE, fileEncoding = "big5")
+data_items <- data2[, grep("^v[0-9]+$", names(data2))]
 data_items <- na.omit(data_items)
 
 # === 2. CFA 檢查模型適配度 ===
