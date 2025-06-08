@@ -111,3 +111,27 @@ for (f in factors) {
     cat("⚠ 缺少檔案：", f, "\n")
   }
 }
+
+
+# === 6. 將每個構面的 data_1 與 data_2 組合上下貼齊 ===
+factors <- names(factor_groups)
+
+for (f in factors) {
+  file1 <- paste0("D:\\Education-Big-Data\\data_1_", f, "_CFI90.csv")
+  file2 <- paste0("D:\\Education-Big-Data\\data_2_", f, "_CFI90.csv")
+  
+  if (file.exists(file1) && file.exists(file2)) {
+    df1 <- read.csv(file1, stringsAsFactors = FALSE)
+    df2 <- read.csv(file2, stringsAsFactors = FALSE)
+  
+    merge_data <- merge(df1, df2, by = c("Factor","Items"))
+    output_file <- paste0("D:\\Education Big Data\\s_", f, "_CFI90.csv")
+    
+    write.csv(merge_data, output_file, row.names = FALSE)
+      
+    cat("✓ Stacked and saved:", output_file, "\n")
+  }
+  else{
+    cat("⚠ 缺少檔案：", f, "\n")
+  }
+}
