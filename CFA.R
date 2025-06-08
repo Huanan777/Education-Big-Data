@@ -5,7 +5,7 @@ library(lavaan)
 library(gtools)
 
 # === 1. 載入資料與預處理 ===
-data2 <- read.csv("data_2.csv", stringsAsFactors = FALSE, fileEncoding = "big5")
+data2 <- read.csv("data_1.csv", stringsAsFactors = FALSE, fileEncoding = "big5")
 data_items <- data2[, grep("^v[0-9]+$", names(data2))]
 data_items <- na.omit(data_items)
 
@@ -18,101 +18,103 @@ model <- '
   F5 =~ v35 + v37 + v38 + v39 + v44
   F6 =~ v47 + v50 + v52 + v57
 '
-fit <- cfa(model, data = data_items, estimator = "WLSM")
+fit <- cfa(model, data = data_items, estimator = "MLR")
 print(fitMeasures(fit, c("cfi", "tli", "rmsea", "srmr")))
 
-# === 3. 題項定義 ===
-latent_items <- list(
-  F1 = c("v2", "v3", "v5", "v8"),
-  F2 = c("v14", "v16", "v17", "v18"),
-  F3 = c("v21", "v22", "v23", "v24"),
-  F4 = c("v28", "v29", "v30", "v31"),
-  F5 = c("v35", "v37", "v38", "v39", "v44"),
-  F6 = c("v47", "v50", "v52", "v57")
-)
+# === SEM 路徑分析（檢驗六個潛在變項之間的假設關係）===
+fscores <- lavPredict(fit)  # 產出 F1~F6 每位受試者的分數
+sem_model <- '
+  F1 =~ v2 + v3 + v5 + v8
+  F2 =~ v14 + v16 + v17 + v18
+  F3 =~ v21 + v22 + v23 + v24
+  F4 =~ v28 + v29 + v30 + v31
+  F5 =~ v35 + v37 + v38 + v39 + v44
+  F6 =~ v47 + v50 + v52 + v57
 
-# === 4. 組合中介模型三元組（排列有順序） ===
-factors <- names(latent_items)
-triplets <- permutations(n = 6, r = 3, v = factors, repeats.allowed = FALSE)
+  F4 ~ F1 + F5             # 自我效能 ← 生涯阻礙、未來時間觀
+  F2 ~ F1 + F4 + F5        # 結果預期 ← 生涯阻礙、自我效能、未來時間觀
+  F3 ~ F1 + F4 + F2        # 學習興趣 ← 生涯阻礙、自我效能、未來時間觀
+  F6 ~ F2 + F5 + F4 + F3   # 生涯希望感 ← 生涯阻礙、結果預期、學習興趣
+'
+sem_model1 <- '
+  F1 =~ v2 + v3 + v5 + v8
+  F5 =~ v35 + v37 + v38 + v39 + v44
+  F1 ~ F5
+'
 
-# === 5. 預備儲存結果 ===
-results <- data.frame(
-  X = character(), M = character(), Y = character(),
-  Indirect = numeric(), Indirect_p = numeric(),
-  Direct = numeric(), Direct_p = numeric(),
-  Total = numeric(), Total_p = numeric(),
-  CFI = numeric(), TLI = numeric(), RMSEA = numeric(), SRMR = numeric(),
-  MediationType = character(),
-  stringsAsFactors = FALSE
-)
+sem_model2 <- '
+  F1 =~ v2 + v3 + v5 + v8
+  F5 =~ v35 + v37 + v38 + v39 + v44
+  F1 ~ F5
+'
 
-# === 6. 逐一分析每組 X ➝ M ➝ Y ===
-for (i in 1:nrow(triplets)) {
-  x <- triplets[i, 1]; m <- triplets[i, 2]; y <- triplets[i, 3]
-  
-  x_items <- paste(latent_items[[x]], collapse = " + ")
-  m_items <- paste(latent_items[[m]], collapse = " + ")
-  y_items <- paste(latent_items[[y]], collapse = " + ")
-  
-  model <- paste0('
-    ', x, ' =~ ', x_items, '
-    ', m, ' =~ ', m_items, '
-    ', y, ' =~ ', y_items, '
-    
-    ', m, ' ~ a*', x, '
-    ', y, ' ~ b*', m, ' + c_prime*', x, '
-    
-    indirect := a*b
-    total := c_prime + a*b
-  ')
-  
-  fit <- tryCatch({
-    sem(model, data = data_items, estimator = "WLSM")
-  }, error = function(e) NULL)
-  
-  if (!is.null(fit) && lavInspect(fit, "converged")) {
-    est <- parameterEstimates(fit, standardized = TRUE)
-    
-    ind_row <- est[est$label == "indirect", ]
-    dir_row <- est[est$label == "c_prime", ]
-    tot_row <- est[est$label == "total", ]
-    
-    if (nrow(ind_row) > 0 && nrow(dir_row) > 0 && nrow(tot_row) > 0) {
-      fit_index <- fitMeasures(fit, c("cfi", "tli", "rmsea", "srmr"))
-      
-      # 分類中介型態
-      med_type <- if (ind_row$pvalue < 0.05 && dir_row$pvalue >= 0.05) {
-        "Full Mediation"
-      } else if (ind_row$pvalue < 0.05 && dir_row$pvalue < 0.05) {
-        "Partial Mediation"
-      } else {
-        "No Mediation"
-      }
-      
-      # 寫入表格
-      results <- rbind(results, data.frame(
-        X = x, M = m, Y = y,
-        Indirect = round(ind_row$est, 4),
-        Indirect_p = round(ind_row$pvalue, 4),
-        Direct = round(dir_row$est, 4),
-        Direct_p = round(dir_row$pvalue, 4),
-        Total = round(tot_row$est, 4),
-        Total_p = round(tot_row$pvalue, 4),
-        CFI = round(fit_index["cfi"], 4),
-        TLI = round(fit_index["tli"], 4),
-        RMSEA = round(fit_index["rmsea"], 4),
-        SRMR = round(fit_index["srmr"], 4),
-        MediationType = med_type
-      ))
-      
-      cat("✓ Done:", x, "→", m, "→", y, "-", med_type, "\n")
-    } else {
-      cat("⚠ Missing label:", x, "→", m, "→", y, "\n")
-    }
-  } else {
-    cat("⚠ Fit failed:", x, "→", m, "→", y, "\n")
-  }
-}
+fit_sem <- sem(sem_model, data = data_items, estimator = "MLR")
+fit_sem1 <- sem(sem_model1, data = data_items, estimator = "MLR")
+fit_sem2 <- sem(sem_model2, data = data_items, estimator = "MLR")
+summary(fit_sem, standardized = TRUE, fit.measures = TRUE)
+summary(fit_sem1, standardized = TRUE, fit.measures = TRUE)
+summary(fit_sem2, standardized = TRUE, fit.measures = TRUE)
+
+# === F5/F1 -> 中介 -> F6 ===
+model_q1 <- '
+  # 測量模型
+  F1 =~ v2 + v3 + v5 + v8
+  F2 =~ v14 + v16 + v17 + v18
+  F3 =~ v21 + v22 + v23 + v24
+  F4 =~ v28 + v29 + v30 + v31
+  F5 =~ v35 + v37 + v38 + v39 + v44
+  F6 =~ v47 + v50 + v52 + v57
+
+  # 中介結構模型
+  F4 ~ a1*F1
+  F2 ~ a2*F1
+  F3 ~ a3*F1 + d1*F4 + d2*F2
+  F6 ~ b1*F4 + b2*F2 + b3*F3 + c*F1
+
+  # 間接效果定義（透過每條路徑）
+  ind1 := a1 * b1   # F5 → F4 → F6
+  ind2 := a2 * b2   # F5 → F2 → F6
+  ind3 := a3 * b3   # F5 → F3 → F6
+  ind4 := a1 * d1 * b3  # F5 → F4 → F3 → F6
+  ind5 := a2 * d2 * b3  # F5 → F2 → F3 → F6
+
+  # 總間接效果與總效果
+  total_indirect := ind1 + ind2 + ind3 + ind4 + ind5
+  total_effect := c + total_indirect
+'
+fit_q1 <- sem(model_q1, data = data_items, estimator = "MLR")
+summary(fit_q1, standardized = TRUE, fit.measures = TRUE, rsquare = TRUE)
+fit_q1 <- sem(model_q1, data = data_items, se = "bootstrap", bootstrap = 1000)
+parameterEstimates(fit_q1, standardized = TRUE,ci = TRUE) |>
+  subset(label %in% c("ind1", "ind2", "ind3", "ind4", "ind5", "total_indirect"))
+
+# === F5/F1 -> 中介 -> F3 ===
+model_q2 <- '
+  # 測量模型
+  F1 =~ v2 + v3 + v5 + v8
+  F2 =~ v14 + v16 + v17 + v18
+  F3 =~ v21 + v22 + v23 + v24
+  F4 =~ v28 + v29 + v30 + v31
+  F5 =~ v35 + v37 + v38 + v39 + v44
+  F6 =~ v47 + v50 + v52 + v57
+
+  # 中介結構模型
+  F4 ~ a1*F5
+  F2 ~ a2*F5
+  F3 ~ b1*F4 + b2*F2 +  c*F5
+
+  # 間接效果定義（透過每條路徑）
+  ind1 := a1 * b1   # F5 → F4 → F3
+  ind2 := a2 * b2   # F5 → F2 → F3
+
+  # 總間接效果與總效果
+  total_indirect := ind1 + ind2
+  total_effect := c+total_indirect
+'
+fit_q2 <- sem(model_q2, data = data_items, estimator = "MLR")
+summary(fit_q2, standardized = TRUE, fit.measures = TRUE, rsquare = TRUE)
+fit_q1 <- sem(model_q2, data = data_items, se = "bootstrap", bootstrap = 1000)
+parameterEstimates(fit_q2_boot, standardized = TRUE, ci = TRUE)[grep("ind|total", parameterEstimates(fit_q3_boot)$label), ]
 
 # === 7. 匯出結果 CSV ===
 write.csv(results, "C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\mediation_triplet_results_classified.csv", row.names = FALSE)
