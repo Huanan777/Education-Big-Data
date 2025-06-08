@@ -125,7 +125,7 @@ for (f in factors) {
     df2 <- read.csv(file2, stringsAsFactors = FALSE)
   
     merge_data <- merge(df1, df2, by = c("Factor","Items"))
-    output_file <- paste0("D:\\Education Big Data\\s_", f, "_CFI90.csv")
+    output_file <- paste0("D:\\Education-Big-Data\\s_", f, "_CFI90.csv")
     
     write.csv(merge_data, output_file, row.names = FALSE)
       
