@@ -79,5 +79,35 @@ run_cfa_analysis <- function(data_name, data_path) {
 }
 
 # === 對 data_1 和 data_2 都執行一次 ===
-#run_cfa_analysis("data_1", "data_1.csv")
+run_cfa_analysis("data_1", "data_1.csv")
 run_cfa_analysis("data_2", "data_2.csv")
+
+
+
+# === 6. 將每個構面的 data_1 與 data_2 組合上下貼齊 ===
+factors <- names(factor_groups)
+
+for (f in factors) {
+  file1 <- paste0("C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\data_1_", f, "_CFI90.csv")
+  file2 <- paste0("C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\data_2_", f, "_CFI90.csv")
+  
+  if (file.exists(file1) && file.exists(file2)) {
+    df1 <- read.csv(file1, stringsAsFactors = FALSE)
+    df2 <- read.csv(file2, stringsAsFactors = FALSE)
+    
+    df1$Source <- "data_1"
+    df2$Source <- "data_2"
+    
+    combined <- rbind(df1, df2)
+    
+    # 依照 Factor + Items + Estimator + Source 排序
+    combined <- combined[order(combined$Factor, combined$Items, combined$Estimator, combined$Source), ]
+    
+    output_file <- paste0("C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\stacked_", f, "_CFI90.csv")
+    write.csv(combined, output_file, row.names = FALSE)
+    
+    cat("✓ Stacked and saved:", output_file, "\n")
+  } else {
+    cat("⚠ 缺少檔案：", f, "\n")
+  }
+}
