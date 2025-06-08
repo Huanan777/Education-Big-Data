@@ -9,7 +9,7 @@ data1 <- read.csv("data_2.csv", stringsAsFactors = FALSE, fileEncoding = "big5")
 data_items <- data1[, grep("^v[0-9]+$", names(data1))]
 data_items <- na.omit(data_items)
 
-# === 2. CFA 檢查模型適配度（非必要但可以保留）===
+# === 2. CFA 檢查模型適配度 ===
 model <- '
   F1 =~ v2 + v7 + v8 + v10 + v11  
   F2 =~ v14 + v16 + v17 + v18 
@@ -19,9 +19,9 @@ model <- '
   F6 =~ v46 + v50 + v51 + v52 + v54 + v57 
 '
 fit <- cfa(model, data = data_items, estimator = "WLSM")
-fitMeasures(fit, c("cfi", "tli", "rmsea", "srmr"))
+print(fitMeasures(fit, c("cfi", "tli", "rmsea", "srmr")))
 
-# === 3. 定義題目對應的潛在變項 ===
+# === 3. 題項定義 ===
 latent_items <- list(
   F1 = c("v2", "v7", "v8", "v10", "v11"),
   F2 = c("v14", "v16", "v17", "v18"),
@@ -31,31 +31,24 @@ latent_items <- list(
   F6 = c("v46", "v50", "v51", "v52", "v54", "v57")
 )
 
-# === 4. 建立所有 X ➝ M ➝ Y 的排列組合 ===
+# === 4. 組合中介模型三元組（排列有順序） ===
 factors <- names(latent_items)
 triplets <- permutations(n = 6, r = 3, v = factors, repeats.allowed = FALSE)
 
-# === 5. 建立結果儲存表 ===
+# === 5. 預備儲存結果 ===
 results <- data.frame(
-  X = character(),
-  M = character(),
-  Y = character(),
-  Indirect = numeric(),
-  Indirect_p = numeric(),
-  Total = numeric(),
-  Total_p = numeric(),
-  CFI = numeric(),
-  TLI = numeric(),
-  RMSEA = numeric(),
-  SRMR = numeric(),
+  X = character(), M = character(), Y = character(),
+  Indirect = numeric(), Indirect_p = numeric(),
+  Direct = numeric(), Direct_p = numeric(),
+  Total = numeric(), Total_p = numeric(),
+  CFI = numeric(), TLI = numeric(), RMSEA = numeric(), SRMR = numeric(),
+  MediationType = character(),
   stringsAsFactors = FALSE
 )
 
-# === 6. 跑 120 組中介模型 ===
+# === 6. 逐一分析每組 X ➝ M ➝ Y ===
 for (i in 1:nrow(triplets)) {
-  x <- triplets[i, 1]
-  m <- triplets[i, 2]
-  y <- triplets[i, 3]
+  x <- triplets[i, 1]; m <- triplets[i, 2]; y <- triplets[i, 3]
   
   x_items <- paste(latent_items[[x]], collapse = " + ")
   m_items <- paste(latent_items[[m]], collapse = " + ")
@@ -65,12 +58,12 @@ for (i in 1:nrow(triplets)) {
     ', x, ' =~ ', x_items, '
     ', m, ' =~ ', m_items, '
     ', y, ' =~ ', y_items, '
-
+    
     ', m, ' ~ a*', x, '
     ', y, ' ~ b*', m, ' + c_prime*', x, '
-
+    
     indirect := a*b
-    total := c_prime + (a*b)
+    total := c_prime + a*b
   ')
   
   fit <- tryCatch({
@@ -81,33 +74,45 @@ for (i in 1:nrow(triplets)) {
     est <- parameterEstimates(fit, standardized = TRUE)
     
     ind_row <- est[est$label == "indirect", ]
+    dir_row <- est[est$label == "c_prime", ]
     tot_row <- est[est$label == "total", ]
     
-    if (nrow(ind_row) > 0 && nrow(tot_row) > 0) {
+    if (nrow(ind_row) > 0 && nrow(dir_row) > 0 && nrow(tot_row) > 0) {
       fit_index <- fitMeasures(fit, c("cfi", "tli", "rmsea", "srmr"))
       
+      # 分類中介型態
+      med_type <- if (ind_row$pvalue < 0.05 && dir_row$pvalue >= 0.05) {
+        "Full Mediation"
+      } else if (ind_row$pvalue < 0.05 && dir_row$pvalue < 0.05) {
+        "Partial Mediation"
+      } else {
+        "No Mediation"
+      }
+      
+      # 寫入表格
       results <- rbind(results, data.frame(
-        X = x,
-        M = m,
-        Y = y,
+        X = x, M = m, Y = y,
         Indirect = round(ind_row$est, 4),
         Indirect_p = round(ind_row$pvalue, 4),
+        Direct = round(dir_row$est, 4),
+        Direct_p = round(dir_row$pvalue, 4),
         Total = round(tot_row$est, 4),
         Total_p = round(tot_row$pvalue, 4),
         CFI = round(fit_index["cfi"], 4),
         TLI = round(fit_index["tli"], 4),
         RMSEA = round(fit_index["rmsea"], 4),
-        SRMR = round(fit_index["srmr"], 4)
+        SRMR = round(fit_index["srmr"], 4),
+        MediationType = med_type
       ))
       
-      cat("✓ Done:", x, "→", m, "→", y, "\n")
+      cat("✓ Done:", x, "→", m, "→", y, "-", med_type, "\n")
     } else {
-      cat("⚠ Skipped (no indirect/total):", x, "→", m, "→", y, "\n")
+      cat("⚠ Missing label:", x, "→", m, "→", y, "\n")
     }
   } else {
-    cat("⚠ Failed model:", x, "→", m, "→", y, "\n")
+    cat("⚠ Fit failed:", x, "→", m, "→", y, "\n")
   }
 }
 
-# === 7. 輸出分析結果 CSV ===
-write.csv(results, "C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\mediation_triplet_results_with_p.csv", row.names = FALSE)
+# === 7. 匯出結果 CSV ===
+write.csv(results, "C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\mediation_triplet_results_classified.csv", row.names = FALSE)
