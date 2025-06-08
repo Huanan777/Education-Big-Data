@@ -11,24 +11,24 @@ data_items <- na.omit(data_items)
 
 # === 2. CFA 檢查模型適配度 ===
 model <- '
-  F1 =~ v2 + v7 + v8 + v10 + v11  
-  F2 =~ v14 + v16 + v17 + v18 
-  F3 =~ v21 + v22 + v23 + v24 
-  F4 =~ v27 + v28 + v30 + v31
-  F5 =~ v33 + v37 + v39 + v40 + v41 + v44
-  F6 =~ v46 + v50 + v51 + v52 + v54 + v57 
+  F1 =~ v2 + v3 + v5 + v8
+  F2 =~ v14 + v16 + v17 + v18
+  F3 =~ v21 + v22 + v23 + v24
+  F4 =~ v28 + v29 + v30 + v31
+  F5 =~ v35 + v37 + v38 + v39 + v44
+  F6 =~ v47 + v50 + v52 + v57
 '
 fit <- cfa(model, data = data_items, estimator = "WLSM")
 print(fitMeasures(fit, c("cfi", "tli", "rmsea", "srmr")))
 
 # === 3. 題項定義 ===
 latent_items <- list(
-  F1 = c("v2", "v7", "v8", "v10", "v11"),
+  F1 = c("v2", "v3", "v5", "v8"),
   F2 = c("v14", "v16", "v17", "v18"),
   F3 = c("v21", "v22", "v23", "v24"),
-  F4 = c("v27", "v28", "v30", "v31"),
-  F5 = c("v33", "v37", "v39", "v40", "v41", "v44"),
-  F6 = c("v46", "v50", "v51", "v52", "v54", "v57")
+  F4 = c("v28", "v29", "v30", "v31"),
+  F5 = c("v35", "v37", "v38", "v39", "v44"),
+  F6 = c("v47", "v50", "v52", "v57")
 )
 
 # === 4. 組合中介模型三元組（排列有順序） ===
