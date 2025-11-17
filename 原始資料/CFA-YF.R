@@ -1,4 +1,4 @@
-setwd("D:\\Education-Big-Data\\原始資料")
+setwd("C:\\Users\\huann\\OneDrive\\Desktop\\Education Big Data\\原始資料")
 library(lavaan)
 
 # 載入資料
